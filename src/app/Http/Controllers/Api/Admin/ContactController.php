@@ -41,6 +41,9 @@ class ContactController extends ApiController
                 $this->middleware($middleware['middleware'], ['except' => $middleware['except']]);
             }
         }
+        else{
+            throw new Exception("Admin middleware configuration is required");
+        }
     }
 
     public function getStatus($request, $query)
