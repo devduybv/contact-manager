@@ -67,8 +67,12 @@ class TestCase extends OrchestraTestCase
         ]);
 
         $app['config']->set('contact.auth_middleware', [
-            'admin' => [],
-            'frontend' => [],
+            'admin' => [
+                [
+                    'middleware' => '',
+                    'except' => [],
+                ],
+            ],
         ]);
         $app['config']->set('contact.test_mode', true);
         $app['config']->set('jwt.secret', '5jMwJkcDTUKlzcxEpdBRIbNIeJt1q5kmKWxa0QA2vlUEG6DRlxcgD7uErg51kbBl');

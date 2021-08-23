@@ -16,19 +16,21 @@ class ContactAdminTest extends TestCase
      */
     public function should_create_contact()
     {
+        $token = $this->loginToken();
+
         $data = [
             'email' => 'test',
         ];
-        $response = $this->json('POST', 'api/contact-management/admin/contacts', $data);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('POST', 'api/contact-management/admin/contacts', $data);
         $this->assertValidation($response, 'email', "The email must be a valid email address.");
         $data = [
             'email' => 'test@gmail.com',
             'full_name' => 'Full Name',
         ];
 
-        $response = $this->json('POST', 'api/contact-management/admin/contacts', $data);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('POST', 'api/contact-management/admin/contacts', $data);
         $response->assertOk();
-        $response->assertJson(['data' => $data]);
+        $response->assertJson($data);
         $this->assertDatabaseHas('contacts', $data);
     }
 
@@ -37,24 +39,23 @@ class ContactAdminTest extends TestCase
      */
     public function should_update_contact()
     {
+        $token = $this->loginToken();
+
         $contact = factory(Contact::class)->create();
         $data = [
             'email' => 'test',
         ];
-        $response = $this->json('PUT', 'api/contact-management/admin/contacts/' . $contact->id, $data);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('PUT', 'api/contact-management/admin/contacts/' . $contact->id, $data);
         $this->assertValidation($response, 'email', "The email must be a valid email address.");
         $data = [
             'email' => 'test@gmail.com',
             'full_name' => 'Name update',
         ];
 
-        $response = $this->json('PUT', 'api/contact-management/admin/contacts/' . $contact->id, $data);
-
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('PUT', 'api/contact-management/admin/contacts/' . $contact->id, $data);
         $response->assertOk();
-        $response->assertJson([
-            'data' => [
-                'full_name' => $data['full_name'],
-            ],
+        $response->assertJsonFragment([
+            'full_name' => $data['full_name'],
         ]);
         $this->assertDatabaseHas('contacts', $data);
     }
@@ -64,16 +65,17 @@ class ContactAdminTest extends TestCase
      */
     public function should_show_contact()
     {
+        $token = $this->loginToken();
+
         $contact = factory(Contact::class)->create();
 
-        $response = $this->get('api/contact-management/admin/contacts/' . $contact->id);
-
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->get('api/contact-management/admin/contacts/' . $contact->id);
         $response->assertOk();
-        $response->assertJson(['data' => [
+        $response->assertJsonFragment([
             'id' => $contact->id,
             'email' => $contact->email,
             'full_name' => $contact->full_name,
-        ]]);
+        ]);
     }
 
     /**
@@ -81,11 +83,12 @@ class ContactAdminTest extends TestCase
      */
     public function should_delete_contact()
     {
+        $token = $this->loginToken();
+
         $contact = factory(Contact::class)->create()->toArray();
         unset($contact['updated_at']);
         unset($contact['created_at']);
-        $response = $this->delete('api/contact-management/admin/contacts/' . $contact['id']);
-
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->delete('api/contact-management/admin/contacts/' . $contact['id']);
         $response->assertOk();
         $response->assertJson(['success' => true]);
         $this->assertDeleted('contacts', $contact);
@@ -96,6 +99,8 @@ class ContactAdminTest extends TestCase
      */
     public function should_get_contact_all_admin()
     {
+        $token = $this->loginToken();
+
         $listContact = [];
         for ($i = 0; $i < 5; $i++) {
             $contact = factory(Contact::class)->create()->toArray();
@@ -104,20 +109,12 @@ class ContactAdminTest extends TestCase
             array_push($listContact, $contact);
         }
 
-        $response = $this->call('GET', 'api/contact-management/admin/contacts');
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('GET', 'api/contact-management/admin/contacts');
         $response->assertStatus(200);
         /* sort by id */
         $listIds = array_column($listContact, 'id');
         array_multisort($listIds, SORT_DESC, $listContact);
         $response->assertJson(['data' => $listContact]);
-        $response->assertJsonStructure([
-            'data' => [],
-            'meta' => [
-                'pagination' => [
-                    'total', 'count', 'per_page', 'current_page', 'total_pages', 'links' => [],
-                ],
-            ],
-        ]);
     }
 
     /**
@@ -125,20 +122,22 @@ class ContactAdminTest extends TestCase
      */
     public function should_update_status_contact_admin()
     {
+        $token = $this->loginToken();
+
         $contact = factory(Contact::class)->create()->toArray();
         unset($contact['updated_at']);
         unset($contact['created_at']);
         $this->assertDatabaseHas('contacts', $contact);
         $data = ['status' => 2];
-        $response = $this->json('PUT', 'api/contact-management/admin/contacts/status/' . $contact['id'], $data);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('PUT', 'api/contact-management/admin/contacts/status/' . $contact['id'], $data);
         $response->assertStatus(200);
         $response->assertJson(['success' => true]);
 
-        $response = $this->json('GET', 'api/contact-management/admin/contacts/' . $contact['id']);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('GET', 'api/contact-management/admin/contacts/' . $contact['id']);
 
-        $response->assertJson(['data' => [
+        $response->assertJson([
             'status' => 2,
-        ]]);
+        ]);
 
     }
 
@@ -147,6 +146,8 @@ class ContactAdminTest extends TestCase
      */
     public function should_bulk_update_status_contact_admin()
     {
+        $token = $this->loginToken();
+
         $contacts = factory(Contact::class, 5)->create();
 
         $contacts = $contacts->map(function ($e) {
@@ -154,16 +155,16 @@ class ContactAdminTest extends TestCase
             unset($e['created_at']);
             return $e;
         })->toArray();
-        $response = $this->json('GET', 'api/contact-management/admin/contacts');
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('GET', 'api/contact-management/admin/contacts');
         $response->assertJsonFragment(['status' => '1']);
 
         $listIds = array_column($contacts, 'id');
 
         $data = ['ids' => $listIds, 'status' => 2];
-        $response = $this->json('PUT', 'api/contact-management/admin/contacts/status/bulk', $data);
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('PUT', 'api/contact-management/admin/contacts/status/bulk', $data);
         $response->assertStatus(200);
         $response->assertJson(['success' => true]);
-        $response = $this->json('GET', 'api/contact-management/admin/contacts');
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->json('GET', 'api/contact-management/admin/contacts');
         $response->assertJsonFragment(['status' => '2']);
     }
     /**
@@ -198,6 +199,8 @@ class ContactAdminTest extends TestCase
         $user->save();
         $login = $this->json('POST', 'api/user-management/login', $dataLogin);
         $token = $login->Json()['token'];
+        $this->withoutMiddleware();
+
         return $token;
 
     }
